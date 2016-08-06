@@ -1,0 +1,234 @@
+### 10. lapply and sapply
+
+| The lapply() function takes a "list" as input, applies a function to
+| each element of the list, then returns a list of the same length as
+| the original one.
+
+| Since a "data frame" is really "just a list of
+| vectors" (you can see this with as.list(flags)), we can use lapply()
+| to apply the class() function to each column of the flags dataset.
+
+> class(flags)
+[1] "data.frame"
+> as.list(flags)
+$name
+  [1] Afghanistan              Albania                 
+  [3] Algeria                  American-Samoa          
+  [5] Andorra                  Angola                  
+  [7] Anguilla                 Antigua-Barbuda         
+  [9] Argentina                Argentine               
+ [11] Australia                Austria                 
+ [13] Bahamas                  Bahrain   
+...
+
+$zone
+  [1] 1 1 1 3 1 2 4 4 3 3 2 1 4 1 1 4 1 4 1 4 1 3 2 3 4 1 1 4 1 2 1 4
+ [33] 4 4 1 1 3 1 4 2 2 3 4 4 1 1 1 1 4 4 3 1 4 1 1 4 3 2 1 1 4 3 2 4
+...
+
+## lapply
+> cls_list <- lapply(flags, class)  
+> class(cls_list)
+[1] "list"
+> cls_list
+$name
+[1] "factor"
+
+$landmass
+[1] "integer"
+
+$zone
+[1] "integer"
+...
+
+>  as.character(cls_list)
+ [1] "factor"  "integer" "integer" "integer" "integer" "integer"
+ [7] "integer" "integer" "integer" "integer" "integer" "integer"
+[13] "integer" "integer" "integer" "integer" "integer" "factor" 
+[19] "integer" "integer" "integer" "integer" "integer" "integer"
+[25] "integer" "integer" "integer" "integer" "factor"  "factor" 
+
+| sapply() allows you to automate this process by calling lapply()
+| behind the scenes, but then attempting to simplify (hence the 's'
+| in 'sapply') the result for you.
+## sapply
+> cls_vect <- sapply(flags, class)
+> class(cls_vect)
+[1] "character"
+> cls_vect
+      name   landmass       zone       area population   language 
+  "factor"  "integer"  "integer"  "integer"  "integer"  "integer" 
+  religion       bars    stripes    colours        red      green 
+ "integer"  "integer"  "integer"  "integer"  "integer"  "integer" 
+      blue       gold      white      black     orange    mainhue   
+...
+
+## More implementation of "lapply" and "sapply"
+> flag_colors <- flags[, 11:17]
+> head(flag_colors)
+  red green blue gold white black orange
+1   1     1    0    1     1     1      0
+2   1     0    0    1     0     1      0
+3   1     1    0    0     1     0      0
+4   1     0    1    1     1     0      1
+5   1     0    1    1     0     0      0
+6   1     0    0    1     0     1      0
+> lapply(flag_colors, sum)
+$red
+[1] 153
+
+$green
+[1] 91
+
+$blue
+[1] 99
+
+$gold
+[1] 91
+
+$white
+[1] 146
+
+$black
+[1] 52
+
+$orange
+[1] 26
+> sapply(flag_colors, sum)
+   red  green   blue   gold  white  black orange 
+   153     91     99     91    146     52     26 
+> sapply(flag_colors, mean)
+      red     green      blue      gold     white     black    orange 
+0.7886598 0.4690722 0.5103093 0.4690722 0.7525773 0.2680412 0.1340206 
+
+| In the examples we've looked at so far, sapply() has been able to
+| simplify the result to vector. That's because each element of the list
+| returned by lapply() was a vector of length one. Recall that sapply()
+| instead returns a matrix when each element of the list returned by
+| lapply() is a vector of the same length (> 1).
+> flag_shapes <- flags[, 19:23]
+> head(flag_shapes)
+    circles crosses saltires quarters sunstars
+1         0       0        0        0        1
+2         0       0        0        0        1
+3         0       0        0        0        1
+4         0       0        0        0        0
+5         0       0        0        0        0
+6         0       0        0        0        1
+> lapply(flag_shapes, range)
+$circles
+[1] 0 4
+
+$crosses
+[1] 0 2
+
+$saltires
+[1] 0 1
+
+$quarters
+[1] 0 4
+
+$sunstars
+[1]  0 50
+> shape_mat <- sapply(flag_shapes, range)
+> shape_mat
+     circles crosses saltires quarters sunstars
+[1,]       0       0        0        0        0
+[2,]       4       2        1        4       50
+
+> unique(c(3, 4, 5, 5, 5, 6, 6))
+[1] 3 4 5 6
+> unique_vals <- lapply(flags, unique)
+> unique_vals
+$name
+  [1] Afghanistan              Albania                 
+  [3] Algeria                  American-Samoa          
+  [5] Andorra                  Angola  
+...
+$landmass
+[1] 5 3 4 6 1 2
+....
+> sapply(unique_vals, length)
+      name   landmass       zone       area population   language 
+       194          6          4        136         48         10 
+  religion       bars    stripes    colours        red      green 
+         8          5         12          8          2          2 
+      blue       gold      white      black     orange    mainhue 
+         2          2          2          2          2          8 
+   circles    crosses   saltires   quarters   sunstars   crescent 
+         4          3          2          3         14          2 
+  triangle       icon    animate       text    topleft   botright 
+         2          2          2          2          7          8 
+> sapply(flags, unique)   # The result is the same as lapply(flags, unique)
+
+### 11. vapply and tapply
+
+| when working non-interactively (e.g.
+| writing your own functions), a misunderstanding may go undetected and
+| cause incorrect results later on. Therefore, you may wish to be more
+| careful and that's where vapply() is useful
+
+> sapply(flags, class)
+      name   landmass       zone       area population   language 
+  "factor"  "integer"  "integer"  "integer"  "integer"  "integer" 
+  religion       bars    stripes    colours        red      green 
+ "integer"  "integer"  "integer"  "integer"  "integer"  "integer" 
+      blue       gold      white      black     orange    mainhue
+...
+
+> vapply(flags, class, character(1))
+      name   landmass       zone       area population   language 
+  "factor"  "integer"  "integer"  "integer"  "integer"  "integer" 
+  religion       bars    stripes    colours        red      green 
+ "integer"  "integer"  "integer"  "integer"  "integer"  "integer" 
+      blue       gold      white      black     orange    mainhue 
+...
+
+| You might think of vapply() as being 'safer' than sapply(), since it
+| requires you to specify the format of the output in advance, instead of
+| just allowing R to 'guess' what you wanted. In addition, vapply() may
+| perform faster than sapply() for large datasets. However, when doing
+| data analysis interactively (at the prompt), sapply() saves you some
+| typing and will often be good enough.
+
+| As a data analyst, you'll often wish to split your data up into groups
+| based on the value of some variable, then apply a function to the
+| members of each group. The next function we'll look at, tapply(), does
+| exactly that.
+
+> table(flags$landmass)
+ 
+ 1  2  3  4  5  6 
+31 17 35 52 39 20
+> table(flags$animate)
+
+  0   1 
+155  39 
+
+| If you take the arithmetic mean of a bunch of 0s and 1s, you get the
+| proportion of 1s. Use tapply(flags$animate, flags$landmass, mean) to
+| apply the mean function to the 'animate' variable separately for each
+| of the six landmass groups, thus giving us the proportion of flags
+| containing an animate image WITHIN each landmass group.
+
+> tapply(flags$animate, flags$landmass, mean)
+        1         2         3         4         5         6 
+0.4193548 0.1764706 0.1142857 0.1346154 0.1538462 0.3000000 
+
+> tapply(flags$population, flags$red, summary)
+$`0`
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   0.00    0.00    3.00   27.63    9.00  684.00 
+
+$`1`
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+    0.0     0.0     4.0    22.1    15.0  1008.0 
+
+| In this lesson, you learned how to use vapply() as a safer alternative
+| to sapply(), which is most helpful when writing your own functions. You
+| also learned how to use tapply() to split your data into groups based
+| on the value of some variable, then apply a function to each group.
+| These functions will come in handy on your quest to become a better
+| data analyst.
+
+
