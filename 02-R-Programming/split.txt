@@ -1,0 +1,75 @@
+# split
+
+> x <- c(1:30)
+> x
+ [1]  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30
+> f <- gl(n = 3, k = 10)
+> f
+ [1] 1 1 1 1 1 1 1 1 1 1 2 2 2 2 2 2 2 2 2 2 3 3 3 3 3 3 3 3 3 3
+Levels: 1 2 3
+> split(x = x, f = f)
+$`1`
+ [1]  1  2  3  4  5  6  7  8  9 10
+
+$`2`
+ [1] 11 12 13 14 15 16 17 18 19 20
+
+$`3`
+ [1] 21 22 23 24 25 26 27 28 29 30
+
+# split function splits out a "list". And then we can use "lapply", "sapply"
+
+
+
+### Case study: airquality
+> library(datasets)
+> head(airquality)
+  Ozone Solar.R Wind Temp Month Day
+1    41     190  7.4   67     5   1
+2    36     118  8.0   72     5   2
+3    12     149 12.6   74     5   3
+4    18     313 11.5   62     5   4
+5    NA      NA 14.3   56     5   5
+6    28      NA 14.9   66     5   6
+
+# Return a list. Elements seperated by month
+> split.by.month <- split(x = airquality, f = airquality$Month)
+
+# After split, use "lapply"
+> lapply(X = split.by.month, FUN = function(x){ colMeans(x[ , c("Ozone", "Solar.R", "Wind")])})
+$`5`
+   Ozone  Solar.R     Wind 
+      NA       NA 11.62258 
+
+$`6`
+    Ozone   Solar.R      Wind 
+       NA 190.16667  10.26667 
+
+$`7`
+     Ozone    Solar.R       Wind 
+        NA 216.483871   8.941935 
+
+$`8`
+   Ozone  Solar.R     Wind 
+      NA       NA 8.793548 
+
+$`9`
+   Ozone  Solar.R     Wind 
+      NA 167.4333  10.1800
+
+# After split, use "sapply" (simplified result)
+> sapply(X = split.by.month, FUN = function(x){ colMeans(x[ , c("Ozone", "Solar.R", "Wind")])})
+               5         6          7        8        9
+Ozone         NA        NA         NA       NA       NA
+Solar.R       NA 190.16667 216.483871       NA 167.4333
+Wind    11.62258  10.26667   8.941935 8.793548  10.1800
+
+# Remove NA for calculation
+> sapply(X = split.by.month, FUN = function(x){ colMeans(x[ , c("Ozone", "Solar.R", "Wind")], na.rm= TRUE)})
+                5         6          7          8         9
+Ozone    23.61538  29.44444  59.115385  59.961538  31.44828
+Solar.R 181.29630 190.16667 216.483871 171.857143 167.43333
+Wind     11.62258  10.26667   8.941935   8.793548  10.18000
+
+
+
