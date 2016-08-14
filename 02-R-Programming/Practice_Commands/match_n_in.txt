@@ -1,0 +1,6 @@
+# match() and %in%
+
+> 2:3 %in% 1:4
+[1] TRUE TRUE
+> match(2:3, 1:4)
+[1] 2 3
