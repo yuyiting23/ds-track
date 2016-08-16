@@ -1,0 +1,856 @@
+---
+title: "BikeSharingProject"
+author: "Nan Ma, I-Ting Yu, Shuang Su, Hsin-Yu Hu"
+date: "June 4, 2016"
+output: html_document
+---
+
+This bike sharing dataset (hour.csv) was obtained from UCI machine learning repository. Below is information of the dataset extracted and modified from the included "Readme.txt" : 
+
+***
+## Background 
+***
+
+Bike sharing systems are a new generation of traditional bike rentals where the whole process from membership, rental and return back has become automatic. Through these systems, the user is able to easily rent a bike from a particular position and return back to another position. Currently, there are about over 500 bike-sharing programs around the world which are composed of over 500 thousand bicycles. Today, there exists great interest in these systems due to their important role in traffic, environmental and health issues. 
+
+***
+## Dataset
+***
+The bike-sharing rental process is highly correlated to the environmental and seasonal settings. For instance, weather conditions, precipitation, day of week, season, hour of the day, etc. can affect the rental behaviors. The core data set is related to the two-year historical log corresponding to years 2011 and 2012 from Capital Bikeshare system, Washington D.C.
+
+***
+## Dataset Characteristics
+***	
+hour.csv
+	
+	- instant: record index
+	- dteday : date
+	- season : season (1:springer, 2:summer, 3:fall, 4:winter)
+	- yr : year (0: 2011, 1:2012)
+	- mnth : month ( 1 to 12)
+	- hr : hour (0 to 23)
+	- holiday : weather day is holiday or not
+	- weekday : day of the week
+	- workingday : if day is neither weekend nor holiday is 1, otherwise is 0.
+	+ weathersit : 
+		- 1: Clear, Few clouds, Partly cloudy, Partly cloudy
+		- 2: Mist + Cloudy, Mist + Broken clouds, Mist + Few clouds, Mist
+		- 3: Light Snow, Light Rain + Thunderstorm + Scattered clouds, Light Rain + Scattered clouds
+		- 4: Heavy Rain + Ice Pallets + Thunderstorm + Mist, Snow + Fog
+	- temp : Normalized temperature in Celsius. The values are divided to 41 (max)
+	- atemp: Normalized feeling temperature in Celsius. The values are divided to 50 (max)
+	- hum: Normalized humidity. The values are divided to 100 (max)
+	- windspeed: Normalized wind speed. The values are divided to 67 (max)
+	- casual: count of bike rented bycasual users
+	- registered: count of registered users
+	- cnt: count of total rental bikes including both casual and registered
+
+***
+## Objective 
+***
+Prediction of hourly bike rental count based on the environmental and seasonal settings.
+
+Let's read the input and take a look at its structure.
+```{r}
+# Read
+hour.data <- read.csv("hour.csv", header= TRUE,stringsAsFactors = FALSE)
+
+# Overview
+str(hour.data)
+head(hour.data)
+```
+
+Split data into training and testing datasets for applying models.
+```{r}
+train <- hour.data[as.integer(substr(hour.data$dteday,9,10)) < 22, ]
+test <- hour.data[as.integer(substr(hour.data$dteday,9,10)) > 21, ]
+
+# Training: 69.2% 
+nrow(train)/ nrow(hour.data)
+
+# Testing: 30.7%
+nrow(test)/ nrow(hour.data)
+```
+
+***
+## Model Selection
+***
+GOAL: Apply different models to find predictive results of hourly total rental of a day 
+
+Technical explanation: 
+For each model built upon training dataset, there will be predictive values against actual values of the testing dataset. The measurement used here is mean((y - yhat)^2) i.e. Mean Squared Error(MSE). We are going to apply multiple models and figure out the one that minimizes MSE. The total rental (cnt) of a day is the sum of registered users (registered) and casual users (casual). After trying different combinations, we found out that using 2 separate models to predict the number of registered users and casual users yield better result than using a single model to predict total rentals (cnt)
+ 
+The followings are models we have applied:
+
+(1) Neural Networks (NN)   
+(2) Linear Regression    
+(3) Support Vector Machine (SVM)   
+(4) Random Forest   
+(5) Gereralized Boosting Model (GBM)    
+(6) Regression Tree   
+
+The results for each model are "cnt.MSE", "combined.MSE", "registered.MSE", "casual.MSE"
+
+
+```{r, warning=FALSE,message=FALSE}
+# Load packages
+library(nnet)
+library(ggplot2)
+library(ggthemes)
+library(gbm)
+library(randomForest)
+library(e1071)
+library(rpart)
+```
+
+
+First, get data ready. Before factorizing some of the attributes, we leave numeric variables as they are for Neural Networks.
+   
+***   
+#### (1) Neural Networks
+
+   
+Step1: Orignal model
+```{r, warning=FALSE,message=FALSE}
+# Orignal Model
+neural.formula = cnt ~ season + yr + mnth + hr + holiday + weekday + workingday+ weathersit + temp + atemp + hum + windspeed
+neural.model = nnet(neural.formula, train, size=20, maxit=5000, linout=T, decay=0.01)
+testset=subset(test, select = c("season", "yr" , "mnth" , "hr" , "holiday" , "weekday" , "workingday" , "weathersit" , "temp" , "atemp" , "hum" , "windspeed"))
+
+neural.cnt = predict(neural.model, testset, type="raw")
+
+test$neural.cnt=neural.cnt
+# Compute MSE
+neural.MSE = sum((test$cnt - test$neural.cnt)^2)/nrow(test)
+neural.MSE
+# Plot to check result
+neural.result = ggplot(test,aes(cnt,neural.cnt))+geom_point()
+neural.result
+# Change negative result to positive
+test$neural.cnt[test$neural.cnt < 0] = 0
+# Compute new MSE
+neural.MSE = sum((test$cnt - test$neural.cnt)^2)/nrow(test)
+neural.MSE
+neural.result = ggplot(test,aes(cnt,neural.cnt))+geom_point()
+neural.result
+```
+
+   
+Step2: Sepeate models for registered and casual
+```{r,warning=FALSE,message=FALSE}
+# Model for Registered
+# Take off weedspeed and holiday yeild to the best result
+neural.registered.formula = registered~season + yr + mnth + hr + weekday + workingday+ weathersit + temp + atemp + hum
+neural.model.registered = nnet(neural.registered.formula, train, size=20, maxit=5000, linout=T, decay=0.01)
+neural.registered = predict(neural.model.registered, testset, type="raw")
+test$neural.registered = neural.registered
+neural.registered.MSE = sum((test$neural.registered-test$registered)^2)/nrow(test)
+neural.registered.MSE
+neural.registered.result = ggplot(test,aes(registered,neural.registered))+geom_point()
+neural.registered.result
+test$neural.registered[test$neural.registered < 0] = 0
+neural.registered.MSE = sum((test$neural.registered-test$registered)^2)/nrow(test)
+neural.registered.MSE
+neural.registered.result = ggplot(test,aes(registered,neural.registered))+geom_point()
+neural.registered.result
+```
+
+
+
+```{r,warning=FALSE,message=FALSE}
+# Model for Casual
+neural.casual.formula = casual~season + yr + mnth + hr + holiday + weekday + workingday+ weathersit + temp + atemp + hum + windspeed
+neural.model.casual = nnet(neural.casual.formula, train, size=20, maxit=5000, linout=T, decay=0.01)
+neural.casual = predict(neural.model.casual, testset, type="raw")
+test$neural.casual = neural.casual
+neural.casual.MSE = sum((test$neural.casual-test$casual)^2)/nrow(test)
+neural.casual.MSE
+neural.casual.result = ggplot(test,aes(casual,neural.casual))+geom_point()
+neural.casual.result
+test$neural.casual[test$neural.casual < 0] = 0
+neural.casual.MSE = sum((test$neural.casual-test$casual)^2)/nrow(test)
+neural.casual.MSE
+neural.casual.result = ggplot(test,aes(casual,neural.casual))+geom_point()
+neural.casual.result
+```
+
+   
+Step3: Now combine the predicted registered users and casual users
+```{r,warning=FALSE}
+test$neural.combined = test$neural.casual + test$neural.registered
+neural.combined.MSE = sum((test$cnt-test$neural.combined)^2)/nrow(test)
+neural.combined.MSE
+```
+
+
+Factorize data for the rest of models
+```{r,warning=FALSE}
+# Factorization of training data
+train$season <- factor(train$season)
+train$yr <- factor(train$yr)
+train$mnth <- factor(train$mnth)
+train$hr <- factor(train$hr)
+train$holiday <- factor(train$holiday)
+train$weekday<- factor(train$weekday)
+train$workingday <- factor(train$workingday)
+train$weathersit <- factor(train$weathersit)
+
+# Factorization of test data
+test$season <- factor(test$season)
+test$yr <- factor(test$yr)
+test$mnth <- factor(test$mnth)
+test$hr <- factor(test$hr)
+test$holiday <- factor(test$holiday)
+test$weekday<- factor(test$weekday)
+test$workingday <- factor(test$workingday)
+test$weathersit <- factor(test$weathersit)
+```
+    
+***   
+#### (2) Linear Regression
+
+   
+Step1: Orignal model
+```{r, warning=FALSE}
+# Orignal Model
+lm.formula = cnt ~ season + yr + mnth + hr + holiday + weekday + 
+    workingday + weathersit + temp + atemp + hum + windspeed
+fit.lm = lm(lm.formula,data=train)
+summary(fit.lm)
+lm.cnt=predict(fit.lm, test)
+test$lm.cnt = lm.cnt
+lm.MSE = sum((test$cnt - test$lm.cnt)^2)/nrow(test)
+lm.MSE
+lm.result = ggplot(test,aes(cnt,lm.cnt))+geom_point()
+lm.result
+test$lm.cnt[test$lm.cnt < 0] = 0
+lm.MSE = sum((test$cnt - test$lm.cnt)^2)/nrow(test)
+lm.MSE
+lm.result = ggplot(test,aes(cnt,lm.cnt))+geom_point()
+lm.result
+```
+
+   
+Step2: Sepeate models for registered and casual
+```{r, warning=FALSE}
+# Model for Registered
+# Windspeed and atemp are taken out
+lm.registered.formula = registered ~ season + yr + mnth + hr + holiday  + 
+    workingday + weathersit + temp + atemp + hum
+lm.model.registered = lm(lm.registered.formula,data=train)
+lm.registered = predict(lm.model.registered,test)
+test$lm.registered = lm.registered
+lm.registered.MSE = sum((test$lm.registered-test$registered)^2)/nrow(test)
+lm.registered.MSE
+lm.registered.result = ggplot(test,aes(registered,lm.registered))+geom_point()
+lm.registered.result
+test$lm.registered[test$lm.registered < 0] = 0
+lm.registered.MSE = sum((test$lm.registered-test$registered)^2)/nrow(test)
+lm.registered.MSE
+lm.registered.result = ggplot(test,aes(registered,lm.registered))+geom_point()
+lm.registered.result
+```
+
+```{r, warning=FALSE}
+# Model for Casual
+# Windspeed is taken out
+lm.casual.formula = casual ~ season + yr + mnth + hr + holiday + weekday + workingday+ weathersit + temp + atemp + hum 
+lm.model.casual = lm(lm.casual.formula, data = train)
+lm.casual = predict(lm.model.casual,test)
+test$lm.casual = lm.casual
+lm.casual.MSE = sum((test$lm.casual-test$casual)^2)/nrow(test)
+lm.casual.MSE
+lm.casual.result = ggplot(test,aes(casual,lm.casual))+geom_point()
+lm.casual.result
+test$lm.casual[test$lm.casual < 0] = 0
+lm.casual.MSE = sum((test$lm.casual-test$casual)^2)/nrow(test)
+lm.casual.MSE
+lm.casual.result = ggplot(test,aes(casual,lm.casual))+geom_point()
+lm.casual.result
+```
+   
+   
+Step3: Now combine the predicted registered users and casual users
+```{r,warning=FALSE}
+test$lm.combined = test$lm.casual + test$lm.registered
+lm.combined.MSE = sum((test$cnt-test$lm.combined)^2)/nrow(test)
+lm.combined.MSE
+```
+    
+***    
+#### (3) SVM
+
+   
+Step1: Orignal model
+```{r, warning=FALSE}
+# Orignal Model 
+svm.formula = cnt ~ season + yr + mnth + hr + holiday + weekday + workingday+ weathersit + temp + atemp + hum + windspeed
+svm.model = svm(svm.formula, data = train)
+svm.cnt=predict(svm.model, test)
+test$svm.cnt = svm.cnt
+svm.MSE = sum((test$cnt - test$svm.cnt)^2)/nrow(test)
+svm.MSE
+svm.result = ggplot(test,aes(cnt,svm.cnt))+geom_point()
+svm.result
+test$svm.cnt[test$svm.cnt < 0] = 0
+svm.MSE = sum((test$cnt - test$svm.cnt)^2)/nrow(test)
+svm.MSE
+svm.result = ggplot(test,aes(cnt,svm.cnt))+geom_point()
+svm.result
+```
+
+   
+Step2: Sepeate models for registered and casual
+```{r, warning=FALSE}
+# Model for Registered
+svm.registered.formula = registered ~ season + yr + mnth + hr + weekday + workingday + temp + atemp + hum 
+svm.model.registered = svm(svm.registered.formula, data = train)
+svm.registered = predict(svm.model.registered,test)
+test$svm.registered = svm.registered
+svm.registered.MSE = sum((test$svm.registered-test$registered)^2)/nrow(test)
+svm.registered.MSE
+svm.registered.result = ggplot(test,aes(registered,svm.registered))+geom_point()
+svm.registered.result
+test$svm.registered[test$svm.registered < 0] = 0
+svm.registered.MSE = sum((test$svm.registered-test$registered)^2)/nrow(test)
+svm.registered.MSE
+svm.registered.result = ggplot(test,aes(registered,svm.registered))+geom_point()
+svm.registered.result
+```
+
+```{r, warning=FALSE}
+# Model for Casual
+svm.casual.formula = casual ~ season + yr + mnth + hr + holiday + weekday + workingday+ weathersit + temp + atemp + hum + windspeed
+svm.model.casual = svm(svm.casual.formula, data = train)
+svm.casual = predict(svm.model.casual,test)
+test$svm.casual = svm.casual
+svm.casual.MSE = sum((test$svm.casual-test$casual)^2)/nrow(test)
+svm.casual.MSE
+svm.casual.result = ggplot(test,aes(casual,svm.casual))+geom_point()
+svm.casual.result
+test$svm.casual[test$svm.casual < 0] = 0
+svm.casual.MSE = sum((test$svm.casual-test$casual)^2)/nrow(test)
+svm.casual.MSE
+svm.casual.result = ggplot(test,aes(casual,svm.casual))+geom_point()
+svm.casual.result
+```
+
+   
+Step3: Now combine the predicted registered users and casual users
+```{r,warning=FALSE}
+test$svm.combined = test$svm.casual + test$svm.registered
+svm.combined.MSE = sum((test$cnt-test$svm.combined)^2)/nrow(test)
+svm.combined.MSE
+```
+      
+***       
+#### (4) Random Forest
+   
+   
+Step1: Orignal model
+```{r, warning=FALSE}
+# Orignal Model 
+forest.formula = cnt ~ season + yr + mnth + hr + holiday + weekday + workingday+ weathersit + temp + atemp + hum + windspeed
+forest.model = randomForest(forest.formula, data = train, importance = TRUE, ntree = 200)
+forest.model$importance
+forest.cnt = predict(forest.model,test)
+test$forest.cnt = forest.cnt
+forest.MSE = sum((test$cnt - test$forest.cnt)^2)/nrow(test)
+forest.MSE
+forest.result = ggplot(test,aes(cnt,forest.cnt))+geom_point()
+forest.result
+test$forest.cnt[test$forest.cnt < 0] = 0
+forest.MSE = sum((test$cnt - test$forest.cnt)^2)/nrow(test)
+forest.MSE
+forest.result = ggplot(test,aes(cnt,forest.cnt))+geom_point()
+forest.result
+```
+
+   
+Step2: Sepeate models for registered and casual
+```{r, warning=FALSE}
+# Model for Registered
+forest.registered.formula = registered ~ season + yr + mnth + hr + holiday + weekday + workingday+ weathersit + temp + atemp + hum + windspeed
+forest.model.registered = randomForest(forest.registered.formula, data = train, importance = TRUE, ntree = 200)
+forest.model.registered$importance
+forest.registered = predict(forest.model.registered,test)
+test$forest.registered = forest.registered
+forest.registered.MSE = sum((test$forest.registered-test$registered)^2)/nrow(test)
+forest.registered.MSE
+forest.registered.result = ggplot(test,aes(registered,forest.registered))+geom_point()
+forest.registered.result
+test$forest.registered[test$forest.registered < 0] = 0
+forest.registered.MSE = sum((test$forest.registered-test$registered)^2)/nrow(test)
+forest.registered.MSE
+forest.registered.result = ggplot(test,aes(registered,forest.registered))+geom_point()
+forest.registered.result
+```
+
+```{r, warning=FALSE}
+# Model for Casual
+forest.casual.formula = casual ~ season + yr + mnth + hr + holiday + weekday + workingday+ weathersit + temp + atemp + hum + windspeed
+forest.model.casual = randomForest(forest.casual.formula, data = train, importance = TRUE, ntree = 160)
+forest.model.casual$importance
+forest.casual = predict(forest.model.casual,test)
+test$forest.casual = forest.casual
+forest.casual.MSE = sum((test$forest.casual-test$casual)^2)/nrow(test)
+forest.casual.MSE
+forest.casual.result = ggplot(test,aes(casual,forest.casual))+geom_point()
+forest.casual.result
+test$forest.casual[test$forest.casual < 0] = 0
+forest.casual.MSE = sum((test$forest.casual-test$casual)^2)/nrow(test)
+forest.casual.MSE
+forest.casual.result = ggplot(test,aes(casual,forest.casual))+geom_point()
+forest.casual.result
+```
+
+   
+Step3: Now combine the predicted registered users and casual users
+```{r,warning=FALSE}
+test$forest.combined = test$forest.casual + test$forest.registered
+forest.combined.MSE = sum((test$cnt-test$forest.combined)^2)/nrow(test)
+forest.combined.MSE
+```
+
+***       
+#### (5) GBM
+
+   
+Step1: Orignal model
+```{r, warning=FALSE}
+# Orignal Model 
+gbm.formula = cnt ~ season + yr + mnth + hr + holiday + weekday + workingday+ weathersit + temp + atemp + hum + windspeed
+gbm.model = gbm(gbm.formula, data=train, n.trees=1000, distribution="gaussian", interaction.depth=5, bag.fraction=0.5, train.fraction=1.0, shrinkage=0.1, keep.data=TRUE)
+summary(gbm.model)
+pef.trees = gbm.perf(gbm.model)
+gbm.cnt = predict(gbm.model, newdata=test, n.trees=pef.trees)
+test$gbm.cnt = gbm.cnt
+gbm.MSE = sum((test$cnt - test$gbm.cnt)^2)/nrow(test)
+gbm.MSE
+gbm.result = ggplot(test,aes(cnt,gbm.cnt))+geom_point()
+gbm.result
+test$gbm.cnt[test$gbm.cnt < 0] = 0
+gbm.MSE = sum((test$cnt - test$gbm.cnt)^2)/nrow(test)
+gbm.MSE
+gbm.result = ggplot(test,aes(cnt,gbm.cnt))+geom_point()
+gbm.result
+```
+
+   
+Step2: Sepeate models for registered and casual
+```{r,warning=FALSE}
+# Model for Registered
+# Take off holiday, weedspeed and hum give the best result
+gbm.registered.formula = registered ~ season + yr + mnth + hr + weekday + workingday+ weathersit + temp
+gbm.model.registered = gbm(gbm.registered.formula, data=train, n.trees=1000, distribution="gaussian", interaction.depth=5, bag.fraction=0.5, train.fraction=1.0, shrinkage=0.1, keep.data=TRUE)
+summary(gbm.model.registered)
+perf.trees.registered = gbm.perf(gbm.model.registered)
+gbm.registered = predict(gbm.model.registered,newdata=test,n.trees = perf.trees.registered)
+test$gbm.registered = gbm.registered
+gbm.registered.MSE = sum((test$gbm.registered-test$registered)^2)/nrow(test)
+gbm.registered.MSE
+gbm.registered.result = ggplot(test,aes(registered,gbm.registered))+geom_point()
+gbm.registered.result
+test$gbm.registered[test$gbm.registered < 0] = 0
+gbm.registered.MSE = sum((test$gbm.registered-test$registered)^2)/nrow(test)
+gbm.registered.MSE
+gbm.registered.result = ggplot(test,aes(registered,gbm.registered))+geom_point()
+gbm.registered.result
+```
+
+```{r,warning=FALSE}
+# Model for Casual
+gbm.casual.formula = casual ~ season + yr + mnth + hr + holiday + weekday + workingday+ weathersit + temp + atemp + hum + windspeed
+gbm.model.casual = gbm(gbm.casual.formula, data=train, n.trees=1000, distribution="gaussian", interaction.depth=5, bag.fraction=0.5, train.fraction=1.0, shrinkage=0.1, keep.data=TRUE)
+summary(gbm.model.casual)
+perf.trees.casual = gbm.perf(gbm.model.casual)
+gbm.casual = predict(gbm.model.casual,newdata=test,n.trees = perf.trees.casual)
+test$gbm.casual = gbm.casual
+gbm.casual.MSE = sum((test$gbm.casual-test$casual)^2)/nrow(test)
+gbm.casual.MSE
+gbm.casual.result = ggplot(test,aes(casual,gbm.casual))+geom_point()
+gbm.casual.result
+test$gbm.casual[test$gbm.casual < 0] = 0
+gbm.casual.MSE = sum((test$gbm.casual-test$casual)^2)/nrow(test)
+gbm.casual.MSE
+gbm.casual.result = ggplot(test,aes(casual,gbm.casual))+geom_point()
+gbm.casual.result
+```
+
+   
+Step3: Now combine the predicted registered users and casual users
+```{r,warning=FALSE}
+test$gbm.combined = test$gbm.casual + test$gbm.registered
+gbm.combined.MSE = sum((test$cnt-test$gbm.combined)^2)/nrow(test)
+gbm.combined.MSE
+```
+    
+***      
+#### (6) Regression Tree
+
+   
+Step1: Original model
+```{r,warning=FALSE}
+# Orignal Model 
+formula.cnt <- cnt ~  season + yr + mnth + hr + holiday + weekday + workingday+ weathersit + temp + atemp + hum + windspeed
+
+fit.rpart.cnt <- rpart(formula.cnt, method="anova", data= train)
+print(summary(fit.rpart.cnt))
+
+# Access significant  vairables
+fit.rpart.cnt$variable.importance
+
+# Validate the fit.rpart model using testing data 
+test.cnt <- test[, "cnt"]
+test.x <- test[, 3:14]
+rpart.cnt <- predict(fit.rpart.cnt, test.x)
+test$rpart.cnt <- rpart.cnt
+rpart.MSE = mean((rpart.cnt - test.cnt)^2)
+rpart.MSE
+rpart.result = ggplot(test,aes(cnt,rpart.cnt))+geom_point()
+rpart.result
+```
+   
+
+Step2: Sepeate models for registered and casual
+```{r,warning=FALSE}
+# Model for Registered
+formula.registered <- registered ~  season + yr + mnth + hr + holiday + weekday + workingday + weathersit + temp + atemp + hum + windspeed
+fit.rpart.registered <- rpart(formula.registered, method="anova", data= train)
+
+test.registered <- test[, "registered"]
+rpart.registered <- predict(fit.rpart.registered, test.x)
+test$rpart.registered <- rpart.registered
+rpart.registered.MSE = mean((rpart.registered - test.registered)^2)
+rpart.registered.MSE
+rpart.registered.result = ggplot(test,aes(registered,rpart.registered))+geom_point()
+rpart.registered.result
+```
+
+```{r,warning=FALSE}
+# Model for Casual
+formula.casual <- casual ~ season + yr + mnth + hr + holiday + weekday + workingday + weathersit + temp + atemp + hum + windspeed
+
+fit.rpart.casual <-  rpart(formula.casual, method="anova", data= train)
+
+test.casual <- test[, "casual"]
+rpart.casual <- predict(fit.rpart.casual, test.x)
+test$rpart.casual <- rpart.casual 
+rpart.casual.MSE = mean((rpart.casual - test.casual)^2)
+rpart.casual.MSE
+rpart.casual.result = ggplot(test,aes(casual,rpart.casual))+geom_point()
+rpart.casual.result
+```
+
+   
+Step3: Now combine the predicted registered users and casual users
+```{r,warning=FALSE}
+rpart.combined = rpart.casual + rpart.registered
+test$rpart.combined <- rpart.combined
+rpart.combined.MSE = sum((test$cnt-test$rpart.combined)^2)/nrow(test)
+rpart.combined.MSE
+```
+
+Now let's compare the results of all the models, the comparism table.
+```{r,warning=FALSE}
+rpart.MSEs <- c(rpart.MSE, rpart.combined.MSE, rpart.registered.MSE, rpart.casual.MSE )
+rpart.MSEs <- matrix(rpart.MSEs, nrow= 1, ncol=4) 
+colnames(rpart.MSEs) <-c("cnt.MSE", "combined.MSE", "registered.MSE", "casual.MSE" )
+rownames(rpart.MSEs) <- "rpart.MSEs"
+lm.MSEs = c(lm.MSE, lm.combined.MSE, lm.registered.MSE, lm.casual.MSE)
+forest.MSEs =  c(forest.MSE, forest.combined.MSE, forest.registered.MSE, forest.casual.MSE )
+svm.MSEs = c(svm.MSE, svm.combined.MSE, svm.registered.MSE, svm.casual.MSE)
+neural.MSEs = c(neural.MSE, neural.combined.MSE, neural.registered.MSE, neural.casual.MSE)
+gbm.MSEs = c(gbm.MSE, gbm.combined.MSE, gbm.registered.MSE, gbm.casual.MSE)
+Summary.MSE=rbind(rpart.MSEs, forest.MSEs, svm.MSEs, neural.MSEs, gbm.MSEs, lm.MSEs)
+Summary.MSE
+```
+
+As shown above, as of registered users, the random forest provides the best prediction, i.e. lowest MSE, and of casual users, GBM yields the best result. Notice predicted results of random forest and GBM contain unwanted negative values, so we have to manually convert them to 0. 
+
+This transformation is crucial because the final output we like to generate is the total number of rentals, which are derived from the predicted registered users (by RandomForest) and predicted casual users (by GBM). Since each output of a model includes negative values, we did transformation before adding those predicted values. Finally, with this additional step, we got the least MSE, which essential would be our ideal model.
+
+***
+### Explorations
+***
+
+After knowing the relative influence (from gbm) of "cnt", "registered", "casual", we attemped to visualize the story behind the scene.
+
+Important Variables (Relative Influence)
+cnt: hr, yr, workingday, temp, mnth, weekday.....
+registered: hr, workingday, yr, mnth, weekday.....
+casual: hr, weekday, temp, workingday.....
+
+Because of the similarities among these factors, we subjectively grouped them into 4 different factor groups and visualized the plottings against "cnt" (Total users), "registered" (Registered users), and "casual" (Casual users).
+
+Factor groups:       
+(1) hr     
+(2) yr, mnth     
+(3) working, weekday, holiday     
+(4) temp, atemp, humidity    
+
+In terms of the number of attributes, we couldn't do all the plottings between each two. Therefore, to be logical, we showed the most significant relationships between x's(e.g. hr, yr ..) and y's (e.g. cnt, registered, casual). 
+
+```{r}
+# Ratio of 2 types of users 
+r.registered <- sum(hour.data$registered) / sum(hour.data$cnt)
+r.casual <- (1- r.registered)
+print(c("Registered %",r.registered ))
+print(c("Causal %", r.casual))
+```
+
+Registerd users majorly account for the rental usage. Because "hr" is the most significant factor, let's see the initial plot between "hr" and "cnt".
+
+```{r}
+plot(x= hour.data$hr, y= hour.data$cnt)
+```
+
+From this plot, we assume there exists an interesting pattern - peak period. As we can see that the cnt stick out during 7-9am and 5-7pm, which coincides with the peak periods when people go to work in the morning and when people get off from work in the afternoon. Let's see the finer grained plots.
+
+
+***
+### Plottings
+***
+
+Since hour is the most significant factor for both registered and casual users, let's see how the cnt, registered and casual fluctuate with the hour. 
+
+As the matter of fact that such rush-hours patterns exist, we divided the hour factor into 5 segments to better visualize and understand how rental number changes for both registered users and casual users with the time of a day.
+```{r}
+# Create daypart column, default to "Night"
+hour.data$daypart <- "Night"
+# 0am -7am: "Early morning"
+hour.data$daypart[(hour.data$hr >=0 ) & (hour.data$hr <7 )] <- "Early Morning" 
+# 7am- 9am : "Peak Morning"
+hour.data$daypart[(hour.data$hr >=7 ) & (hour.data$hr <9 )] <- "Peak Morning"
+# 9am- 5pm : "Day"
+hour.data$daypart[(hour.data$hr >=9 ) & (hour.data$hr <17 )] <- "Day"
+# 5pm- 7pm : "Peak Evenning"
+hour.data$daypart[(hour.data$hr >=17 ) & (hour.data$hr <20 )] <- "Peak Evening"
+
+# Factorization
+hour.data$daypart <- factor(hour.data$daypart)
+```
+
+
+#### (1)Hour
+```{r}
+# Count by hour
+g.cnt.hr <- ggplot(hour.data, aes(x = hr, y = cnt))
+g.cnt.hr + geom_point(aes(color = daypart)) + ggtitle("Total Rental by Hour")
+```
+       
+It is shown two peaks during the morning and evening peaking hours from 7am to 9am and from 5pm to 8pm. Let's break it down into registered and casual users. 
+
+```{r}
+# Registered by hour
+g.registered.hr <- ggplot(hour.data, aes(x = hr, y = registered))
+g.registered.hr + geom_point(aes(color = daypart)) + ggtitle("Registered Rental by Hour")
+```
+       
+The peaking hours are even more obvious for registered users. Apprently, many registered users commute to work by rental bikes.
+
+```{r}
+# Casual by hour 
+g.casual.hr <- ggplot(hour.data, aes(x = hr, y = casual))
+g.casual.hr + geom_point(aes(color = daypart)) + ggtitle("Casual Rental by Hour")
+```
+       
+There was little impact of the peaking hour on casual users. It implies that people who commute by rental bikes mostly are the registered users. Also, lots of casual users tend to use the service in the afternoon, which may correlate with temperature or other weather factors (because starting from 11am, it gets hotter). We would examine our hypothesis later, the relationship between temperature and the causal users.
+
+
+#### (2)Year & Month
+```{r}
+# Monthly total rental fluctuation in two years 
+year <- function(x) {
+  y = 
+    if (x == 0) 2011
+    else 2012
+  return (y)
+} 
+hour.data$year <- factor(sapply(hour.data$yr, year))
+g.cnt.mnth <- ggplot(hour.data, aes(as.numeric(mnth), as.numeric(cnt), colour = as.factor(year)))
+
+g.cnt.mnth + geom_smooth(se = FALSE, method = "auto") + ggtitle("Monthly Total Rental Over Two Years")
+
+```
+      
+The ridership increased significantly in 2012. Furthermore, since 81% of the users are registered, we assumed that the ridership of registered users went up drastically. Let's evaluate our assumption as followed.
+
+```{r}
+# Monthly registered rental fluctuation in two years 
+g.registered.mnth <- ggplot(hour.data, aes(as.numeric(mnth), as.numeric(registered), colour = as.factor(year)))
+
+g.registered.mnth + geom_smooth(se = FALSE, method = "auto") + ggtitle("Monthly Registered Rental Over Two Years")
+```
+       
+Not only did the ridership of registered users increase significantly, there is also an interesting pattern. While the ridership of registered users of the first 7 months increased steadily, it appeared to be a jump from August in 2011. This might result from new policies or other environmental factors.
+
+Notice, usage is generally lower in Winter, which may be related to lower temperature. 
+
+```{r}
+# Monthly casual rental fluctuation in two years
+g.casual.mnth <- ggplot(hour.data, aes(as.numeric(mnth), as.numeric(casual), colour = as.factor(year)))
+
+g.casual.mnth + geom_smooth(se = FALSE, method = "auto") + ggtitle("Monthly Casual Rental Over Two Years")
+```
+     
+There are a lot more casual users in Summer and Fall than Spring and Winter. This fact also explains why casual users are more affected by the environmental settings than registered users.
+
+Recall the previous graph, as compared to casual users, registered users' usage curve are flatter than causal users', because registered users who use bikes to commute are using them regularly relatively insensitive to the month.
+
+
+####(3) Working Day, Weekday, Holiday
+```{r}
+# Count by hour on workingday 
+g.cnt.workday <- ggplot(hour.data, aes(x = hr, y = cnt, fill = as.factor(workingday)))
+g.cnt.workday + geom_bar(stat = "identity", position="dodge") + ggtitle("Total Rental by Workingday")
+```
+      
+1 denotes working day, while 0 denotes non-working day. On working days, the peaking hours are very obvious, while on non-working days, many people use the rental bikes in the afternoon. One way to look at this is that maybe on a non-working day, people like to use the service for fun. 
+
+```{r}
+# Registered on workingday
+g.registered.workday <- ggplot(hour.data, aes(x = hr, y = registered, fill = as.factor(workingday)))
+g.registered.workday + geom_bar(stat = "identity", position="dodge") + ggtitle("Registered Rental by Workingday")
+```
+     
+On working days, most registered users use rental bikes during peak periods, meaning that, again, most registered users are bike commuters. On non-working days, their usage is less fluctuated. Let's evaluate:
+
+```{r}
+library(data.table)
+# Subsetting 
+sub.hour.data <- hour.data[,c("daypart", "cnt", "registered", "casual")]
+
+# Create data table
+dt <-as.data.table(sub.hour.data)
+
+# Extract data where daypart is "Peak Morning" and "Peak Evening " 
+dt.peak <- dt[daypart %in% c("Peak Morning", "Peak Evening")]
+
+# 42.3% of registered users use bike in peak hours
+dt.peak[, sum(registered)] / dt[, sum(registered)]
+```
+
+Notice that 81% of the users are registered and 42.3% of whom used bikes in peak hours, indicating the management needs to pay special attention to peak hours bike arrangement.
+
+```{r}
+# Casual on workingday
+g.casual.workday <- ggplot(hour.data, aes(x = hr, y = casual, fill = as.factor(workingday)))
+g.casual.workday + geom_bar(stat = "identity", position="dodge") + ggtitle("Casual Rental by Workingday")
+```
+      
+Given that most of the users are registered users (81%), of all 19% users are casual users. Unlike registered users, casual users' pattern on working days is similar to non-working days. Notably, casual users tend to use the services on non-working days, especially in the day time, when human activities are vivid. Or maybe they couldn't get enough bikes on working days due to their lower priority.
+
+```{r}
+# Count on weekday
+g.cnt.hr.byweekday <- ggplot(hour.data, aes(as.numeric(hr), as.numeric(cnt), colour = as.factor(weekday)))
+g.cnt.hr.byweekday + geom_smooth(se = FALSE, method = "auto") + ggtitle("Total Rentals vs Hour (from Sunday to Monday)")
+```
+
+Rentals from Monday to Friday falls into one pattern, while rentals from Saturday and Sunday falls into the other. This pattern matches the result of the previous graph, reflecting that the management has to treat the arrangement of bikes on weekdays and weekends very differently.
+
+Let's evaluate our assumption:
+```{r}
+# Check the propotion of registered & casual users on a working or non-working day
+sub.hour.data <- hour.data[,c("workingday", "cnt", "registered", "casual")]
+dt <-as.data.table(sub.hour.data)
+dt.wd1 <- dt[workingday == 1]
+dt.wd0 <- dt[workingday == 0]
+
+# On a working day, 87% of users are registered 
+dt.wd1[, sum(registered)] /dt.wd1[, sum(cnt)]
+
+# While on a non-working day, casual users accounts 32% of total ridership
+dt.wd0[, sum(casual)] /dt.wd0[, sum(cnt)]
+
+```
+
+The business insight here is that, when it is a working day, the management should stress on providing the best services for registered users. 
+
+Conversely, when it is not, although registered users are still more than casual users, the demand for casual users becomes important, especially from 12- 17pm. On a non-working day, the proportion of causal users increases from 13% on a working day to 32%.
+
+
+####(4) Temp, ATemp, Humidity
+
+Just a picture of how temperature changes in a one-year time frame.
+```{r}
+# mnth vs temp
+g.temp.mnth <- ggplot(hour.data, aes(as.numeric(mnth), temp))
+g.temp.mnth + geom_smooth(se = FALSE, method = "auto") + ggtitle("Temperature fluctuation in an Year")
+
+```
+
+As disscused above, we assumed that registered users less affected by environmental settings. Let's see:
+```{r}
+# Registered on temp 
+g.registered.temp <- ggplot(hour.data, aes(x = temp, y = registered))
+g.registered.temp + geom_point()
+```
+
+Without surprise, the number of rental bikes for registered users does not change much according to temperature, which proves our assumption. 
+
+
+```{r}
+# Casual on temp
+g.casual.temp <- ggplot(hour.data, aes(x = temp, y = casual))
+g.casual.temp + geom_point()
+```
+           
+Casual users are more sensitive to temperature than registered users. The usage is much higher between 20 to 30 Celsius degree. Interestingly, casual users find it unbearable when the temperature exceeds 30 degrees, hence, the ridership of casual users dropped greatly.
+
+```{r}
+# Registered/casual on feeled temp
+hour.data$raw.atemp <- hour.data$atemp*50
+g.temp2 <- ggplot(hour.data, aes(x = raw.atemp, y = registered))
+g.temp2 + geom_point()
+g.temp2 <- ggplot(hour.data, aes(x = raw.atemp, y = casual))
+g.temp2 + geom_point()
+```
+     
+The atemp plot is similar to the temp plot.
+
+```{r}
+# Registered/casual on humidity
+g.registered.hum <- ggplot(hour.data, aes(x = hum, y = registered))
+g.registered.hum + geom_point()
+g.casual.hum <- ggplot(hour.data, aes(x = hum, y = casual))
+g.casual.hum + geom_point()
+```
+        
+Casual users are more sensitive to humidity than registered users, but the casual usage is also kind of smooth except extreme humidity (e.g. heavy rain). It indicates that biking activity is not relatively sensitive to humidity.
+
+
+***
+#### Reflection
+***
+The plotting results have confirmed our assumption that hr, mnth, workingday, temp, hum have the major correlation with cnt/registered/casual. We also have the following interesting findings:
+1) Most registered users commute to work by rental bike, while casual users do not.
+2) 2012 showed an increase in users from 2011, contributed majorly by registered users.
+3) On working days and non-working days, the usage pattern by hour differs a lot.
+4) Casual users are more sensitive to weather condition than registered users.
+
+The biking sharing system should allocate bikes considering these facts.
+
+***
+### License, Acknowledgement, and References
+***
+
+[1] Fanaee-T, Hadi, and Gama, Joao, "Event labeling combining ensemble detectors and background knowledge", Progress in Artificial Intelligence (2013): pp. 1-15, Springer Berlin Heidelberg, doi:10.1007/s13748-013-0040-3.
+
+@article{
+	year={2013},
+	issn={2192-6352},
+	journal={Progress in Artificial Intelligence},
+	doi={10.1007/s13748-013-0040-3},
+	title={Event labeling combining ensemble detectors and background knowledge},
+	url={http://dx.doi.org/10.1007/s13748-013-0040-3},
+	publisher={Springer Berlin Heidelberg},
+	keywords={Event labeling; Event detection; Ensemble learning; Background knowledge},
+	author={Fanaee-T, Hadi and Gama, Joao},
+}	
+
+[2] https://rpubs.com/saitej09/bikesharing
+
+[3] https://rpubs.com/yroy/bike
+
+[4] http://brandonharris.io/kaggle-bike-sharing/
