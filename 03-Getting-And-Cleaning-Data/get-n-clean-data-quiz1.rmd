@@ -1,0 +1,150 @@
+---
+title: "get-n-clean-data-quiz1.rmd"
+author: "I-Ting Yu"
+date: "August 16, 2016"
+output: html_document
+---
+
+## Question 1
+The American Community Survey distributes downloadable data about United States communities. Download the 2006 microdata survey about housing for the state of Idaho using download.file() from here:
+
+https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2Fss06hid.csv
+
+and load the data into R. The code book, describing the variable names is here:
+
+https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2FPUMSDataDict06.pdf
+
+How many properties are worth $1,000,000 or more?
+
+```{r}
+if (!file.exists("data")) {
+    dir.create("data")
+}
+
+fileUrl <- "https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2Fss06hid.csv"
+download.file(fileUrl, destfile = "./data/06hid.csv", method = "curl")
+dataDownloaded <- date()
+
+data <- read.csv("./data/06hid.csv")
+head(data, 3)
+
+idx.col <- which(colnames(data)=="VAL")
+data.val <- data[data$VAL == 24, idx.col]
+sum(!is.na(data.val))
+
+```
+
+## Question 2 (skipped)  
+
+## Question 3
+Download the Excel spreadsheet on Natural Gas Aquisition Program here:  
+
+https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2FDATA.gov_NGAP.xlsx
+
+Read rows 18-23 and columns 7-15 into R and assign the result to a variable called: dat  
+
+What is the value of: sum(dat$Zip * dat$Ext, na.rm = T)
+
+```{r}
+library(xlsx)
+fileUrl <- "https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2FDATA.gov_NGAP.xlsx"
+
+download.file(fileUrl, destfile = "./data/gas.xlsx", method = "curl")
+dateDownloaded <- date()
+
+# Troubleshoot: install.packages("rjava")
+# Troubleshoot: install.packages("xlsxjars")
+dat <- read.xlsx("./data/gas.xlsx", sheetIndex = 1, rowIndex = 18:23, colIndex = 7:15 )
+
+sum(dat$Zip * dat$Ext, na.rm = TRUE)
+```
+
+## Question 4
+Read the XML data on Baltimore restaurants from here:
+
+https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2Frestaurants.xml
+
+How many restaurants have zipcode 21231?
+
+##### Becuase xmlTreeParse does not support "https"
+Option 1: change "https" to "http"
+```{r}
+library(XML)
+fileUrl <- "http://d396qusza40orc.cloudfront.net/getdata%2Fdata%2Frestaurants.xml"
+
+download.file(fileUrl, destfile = "./data/Bal_res", method = "curl")
+dateDownloaded <- date()
+
+doc <- xmlTreeParse(fileUrl, useInternal = TRUE)
+
+```
+
+Option 2: use Rcurl
+```{r}
+library(RCurl)
+fileUrl <- "https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2Frestaurants.xml"
+doc.byRCurl <- getURL(fileUrl)
+doc.byRCurl <- xmlTreeParse(doc.byRCurl, useInternal = TRUE)
+
+```
+
+```{r}
+# Wrapper for the entire document 
+rootNode <- xmlRoot(doc)
+xmlName(rootNode)
+
+zipcodes <- xpathSApply(rootNode, "//zipcode", xmlValue)
+
+# The previous returns a chararter vector 
+class(xpathSApply(rootNode, "//zipcode", xmlValue))
+
+sum(zipcodes == 21231)
+
+```
+
+## Question 5
+The American Community Survey distributes downloadable data about United States communities. Download the 2006 microdata survey about housing for the state of Idaho using download.file() from here:
+
+https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2Fss06pid.csv
+
+using the fread() command load the data into an R object: DT
+
+Which of the following is the fastest way to calculate the average value of the variable pwgtp15 broken down by sex using the data.table package?
+
+* DT[,mean(pwgtp15),by=SEX]
+* tapply(DT$pwgtp15,DT$SEX,mean)
+* mean(DT$pwgtp15,by=DT$SEX)
+* rowMeans(DT)[DT$SEX==1]; rowMeans(DT)[DT$SEX==2]
+* sapply(split(DT$pwgtp15,DT$SEX),mean)
+* mean(DT[DT$SEX==1,]$pwgtp15); mean(DT[DT$SEX==2,]$pwgtp15)
+
+```{r}
+library(data.table)
+
+fileUrl <- "https://d396qusza40orc.cloudfront.net/getdata%2Fdata%2Fss06pid.csv"
+
+download.file(fileUrl, destfile = "./data/fss06pid.csv", method="curl")
+
+dateDownloaded <- date()
+```
+
+```{r}
+DT <- fread(input = "./data/fss06pid.csv")
+
+system.time(DT[, mean(pwgtp15), by = SEX])
+
+system.time(tapply(DT$pwgtp15,DT$SEX, mean))
+  
+system.time(mean(DT$pwgtp15,by = DT$SEX))
+
+system.time(sapply(split(DT$pwgtp15,DT$SEX), mean))
+  
+system.time(mean(DT[DT$SEX == 1, ]$pwgtp15))
+
+system.time(mean(DT[DT$SEX == 2, ]$pwgtp15))
+
+```
+
+
+
+

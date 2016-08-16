@@ -1,0 +1,150 @@
+---
+title: "Getting_Data"
+author: "I-Ting Yu"
+date: "August 16, 2016"
+output: html_document
+---
+
+
+```{r}
+# Checking for and creating directory 
+if(!file.exists("data")){
+    dir.create("data")
+}
+```
+
+## Download data from the Internet
+
+```{r}
+fileUrl <- "https://data.baltimorecity.gov/api/views/dz54-2aru/rows.csv?accessType=DOWNLOAD"
+
+# Because it's "https" protocol, "curl" has be to specified  for Mac environment
+download.file(fileUrl, destfile = "./data/cameras.csv", method = "curl")
+list.files("./data")
+
+# To keep track of when the analysi is performed
+dateDownloaded <- date()
+dateDownloaded
+```
+
+
+## Reading csv
+
+Important parameters: quote, na.strings, nrow, skip
+
+```{r}
+cameraData <- read.table("./data/cameras.csv", sep = ",", header = TRUE) 
+# read.csv("./data/cameras.csv") yields same result, because sep defaults to "," and header defaults to "TRUE"
+
+head(cameraData)
+
+# Throws Error !
+# cameraData <- read.table("./data/cameras.csv")
+```
+sep = "" (the default for read.table) the separator is “white space”, that is one or more spaces, tabs, newlines or carriage returns
+
+
+### Reading Excel
+ 
+```{r}
+fileUrl <- "https://data.baltimorecity.gov/api/views/dz54-2aru/rows.xlsx?accessType=DOWNLOAD"
+
+# download.file(fileUrl, destfile = "./data/cameras.xlsx", method = "curl")
+
+# dateDownloaded <- date()
+```
+
+
+Because the link has corrupted
+```{r}
+library(xlsx)
+# cameraData <- read.xlsx("./data/cameras.xlsx", sheetIndex = 1, header = TRUE)
+
+# Read only some of the columns and rows
+# cameraDataSubset <- read.xlsx("./data/cameras.xlsx", sheetIndex = 1, colIndex = 2:3, rowIndex = 1:4, header = TRUE)
+
+```
+Note:  
+* write.xlsx  
+* read.xlsx2 is much faster  
+* XLConnect, more options  
+* XLConnect vignette, more options   
+
+## Reading XML
+```{r}
+library(XML)
+fileUrl <- "http://www.w3schools.com/xml/simple.xml"
+doc <- xmlTreeParse(fileUrl, useInternal = TRUE)
+```
+
+We will use different functions to access different parts of the xml object.
+
+```{r}
+# Wrapper for the entire document 
+rootNode <- xmlRoot(doc)
+xmlName(rootNode)
+names(rootNode)
+
+# Just as access a list element
+rootNode[[1]]
+class(rootNode[[1]])
+
+# Access the second element within that node
+rootNode[[1]][[2]]
+```
+
+
+```{r}
+# Programatically extract parts of the file 
+xmlSApply(rootNode, xmlValue)
+
+# "//xxxx" is the tag name 
+xpathSApply(rootNode, "//name", xmlValue)
+xpathSApply(rootNode, "//price", xmlValue)
+
+```
+
+#### Example: Extract Html
+```{r}
+fileUrl <- "http://www.espn.com/nfl/team/_/name/bal/baltimore-ravens"
+
+# an html file. useInternal = TRUE, so that we can get all the different nodes inside the file 
+doc <- htmlTreeParse(fileUrl, useInternal = TRUE)
+
+# Extract compoents of the document 
+scores <- xpathSApply(doc, "//li[@class = 'score']", xmlValue)
+teams <- xpathSApply(doc, "//li[@class = 'team-name']", xmlValue)
+
+```
+
+## Reading JSON
+```{r}
+library(jsonlite)
+jsonData <- fromJSON("http://api.github.com/users/jtleek/repos")
+
+# Return the name of the top level objects
+names(jsonData)
+
+# Drill down. Get all names included at the owner object
+names(jsonData$owner)
+
+# Drill down. Get the data 
+jsonData$owner$login
+```
+
+#### Wriring JSON
+```{r}
+myjson <- toJSON(iris, pretty = TRUE)
+
+# Same as print(myjson)
+cat(myjson) 
+
+# Convert back to JSON
+iris2 <- fromJSON(myjson)
+head(iris2)
+
+```
+
+
+
+
