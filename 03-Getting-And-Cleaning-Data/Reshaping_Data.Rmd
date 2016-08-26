@@ -1,0 +1,75 @@
+---
+title: "Reshaping_Data"
+author: "I-Ting Yu"
+date: "August 22, 2016"
+output: html_document
+---
+
+The goal is tidy data  
+- each variable forms a column  
+- each observation forms a row  
+- each table/file stores data about one kind of observation (e.g. people/hospitals)
+
+```{r}
+library(reshape2)
+head(mtcars)
+```
+
+### Melt data frames
+```{r}
+mtcars$carname <- rownames(mtcars)
+head(mtcars, 3)
+nrow(mtcars)
+
+carMelt <- melt(mtcars, id = c("carname", "gear", "cyl"), measure.vars = c("mpg", "hp"))
+head(carMelt, 4)
+tail(carMelt, 4)
+nrow(carMelt)
+```
+
+### Cast data frames
+Reformat into a particular shape.  
+Used to summarize the original data set  
+```{r}
+# How many measures of each type of cyl
+cylData <- dcast(carMelt, formula = cyl ~ variable)
+cylData
+
+cylData <- dcast(carMelt, formula = cyl ~ variable, fun.aggregate = mean)
+cylData
+```
+
+### Average values
+```{r}
+head(InsectSprays)
+
+# Applies along on index
+tapply(InsectSprays$count, INDEX = InsectSprays$spray, FUN = sum)
+```
+
+### Another way- split() and then lapply()
+```{r}
+spIns <- split(x = InsectSprays$count, f = InsectSprays$spray)
+spIns
+
+# Notice the slight difference
+split(x = InsectSprays, f = InsectSprays$spray)
+
+# lapply
+sprCount <- lapply(spIns, FUN = sum)
+sprCount
+unlist(sprCount)
+
+# sapply, tries to simplify the result from lapply
+sprCount <- sapply(spIns, FUN = sum)
+sprCount
+```
+
+### Another way- plyr
+```{r}
+library(plyr)
+ddply(InsectSprays, .variables =  .(spray), .fun = summarize, sum = sum(count))
+
+```
+
+

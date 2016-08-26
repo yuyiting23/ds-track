@@ -1,0 +1,88 @@
+---
+title: "Reading_From_The_Web"
+author: "I-Ting Yu"
+date: "August 18, 2016"
+output: html_document
+---
+
+#### Getting Data off Webpages
+```{r}
+conn <- "http://scholar.google.com/citations?user=HI-I6C0AAAAJ&hl=en"
+
+htmlcode <- readLines(conn) 
+
+# Error on this 
+# close(conn)
+
+# It comes out as one long character string
+# htmlcode
+```
+
+#### Parsing with XML
+```{r}
+library(XML)
+url <- "http://scholar.google.com/citations?user=HI-I6C0AAAAJ&hl=en"
+
+html <- htmlTreeParse(url, useInternalNodes = TRUE)
+
+rootNode <- xmlRoot(html)
+class(rootNode[[1]])
+class(rootNode[1])
+
+xmlName(rootNode)
+names(rootNode)
+
+xpathApply(html, "//title", xmlValue)
+xpathSApply(html, "//title", xmlValue)
+xpathSApply(doc = html, path = "//div[@class='gsc_prf_il']", fun = xmlValue)
+
+```
+
+#### GET from the httr Package
+```{r}
+library(httr)
+html.response <- GET(url)
+
+# A long characher string contains content, content html tags, quotes, etc
+html.code <- content(x = html.response, as = "text")
+class(html.code)
+
+# A formatted html 
+parsed.html <- htmlParse(file = html.code, asText = TRUE)
+class(parsed.html)
+
+xpathSApply(doc = parsed.html, path = "//title", fun = xmlValue)
+
+```
+
+#### Accessing websites with passwords
+```{r}
+response <- GET("http://httpbin.org/basic-auth/user/passwd")
+
+# Status 401, meaning wasn't able to log in, because havent been authenticated
+response
+
+response2 <-  GET(url = "http://httpbin.org/basic-auth/user/passwd", 
+                  authenticate(user = "user", password = "passwd"))
+# Status 200, meaning able to get access
+response2
+names(response2)
+```
+
+#### Using handles
+So that you can authenticate once, and you'll be remembered by the cookie
+```{r}
+google <- handle("http://www.google.com")
+response.google <- GET(handle = google, path = "/")
+response.google
+
+response2.google <- GET(handle = google, path = "/search")
+response2.google
+```
+
+
+
+
+
+
+

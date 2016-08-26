@@ -1,0 +1,86 @@
+---
+title: "Subetting_and_Sorting"
+author: "I-Ting Yu"
+date: "August 20, 2016"
+output: html_document
+---
+
+```{r}
+set.seed(123)
+X <- data.frame("var1" = sample(1:5), "var2" = sample(6:10), "var3" = sample(11:15))
+
+# Simple way to shuffle all rows
+X[sample(1:5), ] 
+
+# X$var2 is an integer vector, i.e. no dimensions.
+X$var2[c(1,3)] <- NA
+
+X
+```
+
+### Logical & and |
+```{r}
+X[X$var1 <= 3 & X$var3 > 11, ]
+
+X[X$var1 <= 3 | X$var3 > 15, ]
+
+```
+
+### Dealing with missing values
+Subsetting on NAs will not produce actual rows.
+```{r}
+X[which(X$var2 > 8), ]
+class(X[which(X$var2 > 8), ])
+dim(X[which(X$var2 > 8), ])
+
+# Error when knitting (Worked when running line-by-line) 
+# X[which(X$var2 > 8)]
+# X[, which(X$var2 > 8)]
+# class(X[, which(X$var2 > 8)])
+# dim(X[, which(X$var2 > 8)])
+```
+
+### Sorting
+```{r}
+sort(X$var1)
+
+sort(X$var1, decreasing = TRUE)
+
+# Put missing values at the end of the sort
+sort(X$var2, na.last = TRUE)
+```
+
+### Ordering
+```{r}
+# Default: Increasing
+sort(X$var1)
+
+# Default: Decreasing
+order(X$var1)
+X[order(X$var1), ]
+
+# Order by "multiple variables"
+X[order(X$var1, X$var3), ]
+
+```
+
+### plyr package
+```{r}
+library(plyr)
+arrange(X, var1)
+arrange(X, desc(var1))
+```
+
+### Adding rows or columns
+```{r}
+X$var4 <- rnorm(nrow(X))
+
+Y <- cbind(X, rnorm(5))
+
+Y <- rbind(1:5, Y)
+```
+
+
+
+
+

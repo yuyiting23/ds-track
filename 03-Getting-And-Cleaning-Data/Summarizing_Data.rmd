@@ -1,0 +1,111 @@
+---
+title: "Summarizing_Data"
+author: "I-Ting Yu"
+date: "August 20, 2016"
+output: html_document
+---
+
+### Getting data from the Web
+```{r warning = FALSE}
+if(!file.exists("./data")) { dir.create("./data")}
+fileUrl <- "https://data.baltimorecity.gov/api/views/k5ry-ef3g/rows.csv?accessType=DOWNLOAD"
+download.file(fileUrl, destfile = "./data/restaurants.csv", method = "curl")
+rest.data <- read.csv("./data/restaurants.csv")
+```
+
+### Have a look on the data
+```{r}
+head(rest.data, n = 3)
+summary(rest.data)
+str(rest.data)
+```
+
+### Quantiles of quantitative variables
+```{r}
+quantile(rest.data$councilDistrict, na.rm = TRUE)
+quantile(rest.data$councilDistrict, probs = c(0.5, 0.75, 0.9))
+```
+
+### Make table
+```{r}
+# useNA: (default: "no"), "ifany","always"
+table(rest.data$zipCode, useNA = "ifany")
+```
+By default, the table function does not tell you whether NAs occur. It's important specify useNA = "ifany"  
+[link to resource](https://www.r-bloggers.com/r-function-of-the-day-table/)  
+
+```{r}
+# 2-dimensional table 
+table(rest.data$zipCode, rest.data$councilDistrict)
+```
+
+### Check for missing values
+```{r}
+head(is.na(rest.data$councilDistrict), n = 20)
+
+sum(is.na(rest.data$councilDistrict))
+
+any(is.na(rest.data$councilDistrict))
+
+# Make sure to type the name right (Case sensitive)
+# INCORRECT
+all(rest.data$zipcode > 0)
+
+# CORRECT
+all(rest.data$zipCode > 0)
+```
+
+Using colSums and rowSums
+```{r}
+colSums(is.na(rest.data))
+
+colSums(is.na(rest.data)) == 0
+
+all(colSums(is.na(rest.data)) == 0)
+
+```
+
+### Value with specific characteristics
+```{r}
+str(rest.data$zipCode == "21212")
+table(rest.data$zipCode %in% "21212")
+
+table(rest.data$zipCode %in% c("21212", "21213"))
+
+# Used logical vector for subsetting
+head(rest.data[rest.data$zipCode %in% c("21212", "21213"), ])
+```
+
+### Cross tabs
+```{r}
+data("UCBAdmissions")
+ucb.df <- as.data.frame(UCBAdmissions)
+summary(ucb.df)
+print(ucb.df)
+
+xt <- xtabs(Freq ~ Gender + Admit, data = ucb.df)
+xt
+```
+
+
+
+### Flat tables
+
+```{r}
+str(warpbreaks)
+
+# Ass a new column 
+warpbreaks$replicate <- rep(1:9, len = 54)
+head(warpbreaks, 15)
+
+xt <- xtabs(breaks ~ ., data = warpbreaks)
+xt
+ftable(xt)
+```
+
+### Size of a data set
+```{r}
+object.size(warpbreaks)
+print(object.size(warpbreaks), units = "Kb")
+```
+

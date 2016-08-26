@@ -1,0 +1,143 @@
+---
+title: "Data_Table"
+author: "I-Ting Yu"
+date: "August 16, 2016"
+output: html_document
+---
+  
+```{r}
+DF <- data.frame(x = rnorm(9), y = rep(c("a", "b", "c"), each = 3), z = rnorm(9))
+head(DF,3)
+class(DF)
+
+```
+
+Inherets from data.frame
+```{r}
+library(data.table)
+DT <- data.table(x = rnorm(9), y = rep(c("a", "b", "c"), each = 3), z = rnorm(9))
+head(DT,3)
+class(DT)
+```
+
+```{r}
+# See all data tables in memory
+tables()
+
+# Subsetting 
+DT[2, ]
+DT[DT$y == "a", ]
+DT[c(2,3)]
+DT[c(2,3), ]
+
+# NOTICE Subsetting columns??! 
+DT[, c(2,3)]
+```
+
+### Calcualting values for variables with expressions
+The argument you pass after the comma is called an expression(e.g. DT[, mean(x)] )
+```{r}
+# Same results
+print(DT)
+mean(DT$x)
+DT[, mean(x)]
+
+DT[, list(mean(x), sum(z))]
+
+table(DT$y)
+DT[, table(y)]
+```
+
+### Adding new columns
+It doesnt create a new copy like data.frame. More memory effient, especially dealing with large data set
+```{r}
+DT[, w := z^2]
+print(DT)
+```
+
+Careful!!  
+Because the new copy hasn't been made. The changes reflect on DT2 as well.
+```{r}
+DT2 <- DT
+head(DT2, 3)
+
+DT[, y := 2]
+head(DT, 3)
+head(DT2, 3)
+
+```
+
+### Manipulate coulums
+
+```{r}
+DT[, m := { tmp <- (x+z); tmp + 1}]
+head(DT, 3)
+
+# plyr like operation
+DT[, a := x > 0]
+head(DT, 3)
+
+DT[, b := mean(x + w), by = a]
+head(DT, 3)
+```
+
+### Special Variable
+".N" counts the number of observation of a unique level by column
+```{r}
+set.seed(123)
+DT <- data.table(
+      x = sample(letters[1:5], size = 100, replace = TRUE),
+      y = sample(LETTERS[1:5], size = 100, replace = TRUE))
+head(DT, 10)
+
+DT[, .N, by = x]
+DT[, .N, by = y]
+
+```
+
+### Keys
+
+```{r}
+DT <- data.table(
+          x = rep(c("c", "b", "a"), each = 5),
+          y = rnorm(15))
+
+setkey(DT, x)
+
+# Subset data by key
+DT['a']
+
+```
+
+
+### Joins
+```{r}
+DT1 <- data.table(x = c("a", "a", "b", "dt1"), y = 1:4)
+DT1
+DT2 <- data.table(x = c("b", "a", "dt2"), z = 5:7)
+DT2
+
+setkey(DT1, x)
+setkey(DT2, x)
+
+# Remember to set keys from 2 tables to be joined
+merge(DT1, DT2)
+
+```
+
+### Fast Reading 
+```{r}
+# Using fread, 10x faster 
+big.df <- data.frame(x = rnorm(1E5), y = rnorm(1E5))
+tmp.file <- tempfile()
+write.table(big.df, file = tmp.file, row.names = FALSE, col.names = TRUE, sep = "\t", quote = FALSE)
+system.time(fread(tmp.file))
+
+# Reguler way
+system.time(read.table(tmp.file, header = TRUE, sep = "\t"))
+
+```
+
+
+
+

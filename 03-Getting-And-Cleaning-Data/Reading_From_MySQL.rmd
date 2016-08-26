@@ -1,0 +1,72 @@
+---
+title: "Reading_From_MySQL"
+author: "I-Ting Yu"
+date: "August 16, 2016"
+output: html_document
+---
+
+#### Connect and list databases 
+```{r}
+library(RMySQL)
+
+ucscDb <- dbConnect(drv = MySQL(), user = "genome", host = "genome-mysql.cse.ucsc.edu")
+
+result <- dbGetQuery(conn = ucscDb, statement = "SHOW DATABASES")
+
+dbDisconnect(ucscDb)
+
+head(result)
+```
+
+#### Connect to a DB and list tables
+```{r}
+hg19.db <- dbConnect(drv = MySQL(), user = "genome", db = "hg19", host = "genome-mysql.cse.ucsc.edu")
+
+all.tables <- dbListTables(hg19.db)
+
+head(all.tables)
+length(all.tables)
+
+```
+
+#### Get dimensions of a specific table
+```{r}
+dbListFields(conn = hg19.db, name = "affyU133Plus2")
+
+dbGetQuery(conn = hg19.db, statement = "SELECT count(*) FROM affyU133Plus2")
+
+```
+
+#### Read from the table
+```{r warning = FALSE}
+# Unexpected Error when knitting HTML
+data.affy <- dbReadTable(conn = hg19.db, name = "affyU133Plus2") 
+head(data.affy, 3)
+```
+
+#### Select a specific subset
+Because normally the data(table content) is gigantic
+```{r warning = FALSE}
+query.result <- dbSendQuery(conn = hg19.db, statement = "SELECT * FROM affyU133Plus2 WHERE misMatches BETWEEN 1 AND 3")
+print(query.result)
+
+data.affy.mis <- fetch(query.result)
+dim(data.affy.mis)
+head(data.affy.mis[, 1:5])
+
+data.affy.mis.small <- fetch(query.result, n = 10)
+dim(data.affy.mis.small)
+data.affy.mis.small[, 1:5]
+
+
+dbClearResult(query.result)
+
+dbDisconnect(hg19.db)
+
+
+```
+
+
+
+
+

@@ -1,0 +1,70 @@
+---
+title: "Merging_Data.rmd"
+author: "I-Ting Yu"
+date: "August 22, 2016"
+output: html_document
+---
+
+```{r}
+if(!file.exists("./data")) { dir.create("./data")}
+fileUrl1 <- "https://dl.dropboxusercontent.com/u/7710864/data/reviews-apr29.csv"
+fileUrl2 <- "https://dl.dropboxusercontent.com/u/7710864/data/solutions-apr29.csv"
+
+download.file(fileUrl1, destfile = "./data/reviews.csv", method = "curl")
+download.file(fileUrl2, destfile = "./data/solutions.csv", method = "curl")
+
+reviews <- read.csv("./data/reviews.csv")
+solutions <- read.csv("./data/solutions.csv")
+
+head(reviews, 3)
+head(solutions, 3)
+```
+
+### Merge data - merge()
+Important parameters: x, y, by, by.x, by.y, all  
+* by.x, by.y: tell which column you want to merge by
+* all = TRUE: keep all the record on both sides and apply NA if there no match for a particular record between those 2 data frames
+```{r}
+names(reviews)
+names(solutions)
+
+mergeData <- merge(x = reviews, y = solutions, by.x = "solution_id", by.y = "id", all = TRUE)
+head(mergeData)
+
+```
+
+### Default - merge all common columns names
+```{r}
+intersect(names(solutions), names(reviews))
+
+mergeData2 <- merge(reviews, solutions, all =TRUE)
+head(mergeData2)
+```
+
+### Use join in the plyr package
+```{r}
+library(plyr)
+df1 <- data.frame(id = sample(1:10), x = rnorm(10))
+df2 <- data.frame(id = sample(1:10), y = rnorm(10))
+
+# base::merge(), do not have to specify by.x and by.y because they have the common column name
+merge(x = df1, y =  df2, all = TRUE)
+
+# From plyr
+join(df1, df2)
+arrange(join(df1, df2), id)
+
+```
+
+### If you have multiple data frames 
+```{r}
+df1 <- data.frame(id = sample(1:10), x = rnorm(10))
+df2 <- data.frame(id = sample(1:10), y = rnorm(10))
+df3 <- data.frame(id = sample(1:10), z = rnorm(10))
+
+df.list <- list(df1, df2, df3)
+join_all(df.list)
+
+```
+
+

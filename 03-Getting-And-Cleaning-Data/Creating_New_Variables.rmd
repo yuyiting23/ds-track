@@ -1,0 +1,92 @@
+---
+title: "Creating_New_Variables"
+author: "I-Ting Yu"
+date: "August 20, 2016"
+output: html_document
+---
+
+## Why creating new variables?
+* Raw data wont have values that you're looking for
+* Tranferm data to what you desire
+* Add some varaibles to the data frame that you're working with
+
+Common variables:
+- Missing indicators  
+- "Cutting up" quantitative varaibles (factor version) 
+- Applying transformations 
+```{r}
+if(!file.exists("./data/restaurants.csv")) {
+    fileUrl <- "https://data.baltimorecity.gov/api/views/k5ry-ef3g/rows.csv?accessType=DOWNLOAD"
+    download.file(fileUrl, destfile = "./data/restaurants.csv", method = "curl")
+}
+
+rest.data <- read.csv("./data/restaurants.csv")
+```
+
+### Create sequences
+
+Often used to index different operations that you're gonna to do on data
+```{r}
+s1 <- seq(1, 10, by = 2)
+s1
+s2 <- seq(1, 10, length = 3)
+s2
+
+# Create index in order to loop through the data
+x <- c(6, 8, 1, 28,13)
+seq(along = x)
+```
+
+### Subsetting varaibles
+```{r}
+rest.data$nearMe <- rest.data$neighborhood %in% c("Roland Park", "Homeland")
+head(rest.data)
+table(rest.data$nearMe)
+```
+Make it a lot earier when we only want to deal the data in our neighborhood("Roland Park", "Homeland")  
+i.e. no longer have to use : rest.data$neighborhood %in% c("Roland Park", "Homeland")
+
+### Create binary variables
+```{r}
+rest.data$zipWrong <- ifelse(rest.data$zipCode < 0, yes = TRUE, no = FALSE)
+table(rest.data$zipWrong)
+```
+
+### Create categorical variable
+
+```{r}
+rest.data$zipGroups <- cut(rest.data$zipCode, breaks = quantile(rest.data$zipCode))
+
+table(rest.data$zipGroups)
+table(rest.data$zipGroups, rest.data$zipCode)
+
+# easier cutting
+library(Hmisc)
+# g: number of quantitle groups
+rest.data$zipGroups <- cut2(rest.data$zipCode, g = 4)
+table(rest.data$zipGroup)
+```
+
+
+### Create factor variable
+```{r}
+rest.data$zcf <- factor(rest.data$zipCode)
+rest.data$zcf[1:10]
+```
+
+#### Use the mutate function
+```{r}
+library(Hmisc)
+library(plyr)
+rest.data.2 <- mutate(rest.data, zipGroups = cut2(zipCode, g = 4))
+head(rest.data.2)
+```
+
+Common transformatons:  
+* round(x , digit = n)  
+* signif(x, digit = n)  
+* log(x)  
+* log2(x)  
+* log10(x)  
+* exp(x)
+

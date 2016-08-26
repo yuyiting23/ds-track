@@ -1,0 +1,85 @@
+---
+title: "Editing_Text_Variabels"
+author: "I-Ting Yu"
+date: "August 23, 2016"
+output: html_document
+---
+
+```{r}
+if(!file.exists("./data/cameras.csv")){
+    theUrl <- "https://data.baltimorecity.gov/Transportation/Baltimore-Fixed-Speed-Cameras/dz54-2aru"
+    download.file(theUrl, destfile = "./data/cameras.csv", method = "curl")
+}
+
+camera.data <- read.csv("./data/cameras.csv")
+names(camera.data)
+```
+
+### tolower(), toupper()
+```{r}
+tolower(names(camera.data))
+```
+
+### strsplit()
+```{r}
+split.names.list <- strsplit(names(camera.data), split = "\\.")
+split.names.list[6]
+split.names.list[[6]]
+split.names.list[[6]][1]
+
+FirstElement <- function(x) { x[1] }
+sapply(split.names.list, FirstElement)
+```
+
+### reviews and solutions data sets
+```{r}
+if(!file.exists("./data/reviews.csv")){
+    fileUrl1 <- "https://dl.dropboxusercontent.com/u/7710864/data/reviews-apr29.csv"
+    download.file(fileUrl1, destfile = "./data/reviews.csv", method = "curl")
+}
+
+if(!file.exists("./data/solutions.csv")){
+    fileUrl2 <- "https://dl.dropboxusercontent.com/u/7710864/data/solutions-apr29.csv"
+    download.file(fileUrl2, destfile = "./data/solutions.csv", method = "curl")
+}
+
+reviews <- read.csv("./data/reviews.csv")
+solutions <- read.csv("./data/solutions.csv")
+
+head(reviews, 3)
+head(solutions, 3)
+
+```
+
+### sub(), gsub()
+```{r}
+names(reviews)
+sub(pattern = "_", replacement = "", x = names(reviews))
+
+test.name <- "this_is_a_test"
+sub(pattern = "_", replacement = "", x = test.name)
+gsub(pattern = "_", replacement = "", x = test.name)
+```
+
+### grep()
+```{r}
+head(camera.data$intersection)
+grep(pattern = "Alameda", camera.data$intersection)
+
+table(grepl(pattern = "Alameda", camera.data$intersection))
+
+camera.data.2 <- camera.data[grepl(pattern = "Alameda", camera.data$intersection), ]
+
+grep(pattern = "Alameda", camera.data$intersection, value = TRUE)
+
+
+```
+
+### stringr package
+```{r}
+library(stringr)
+nchar("Yiting")
+paste("yting", "yu")
+str_trim("Yu     ")
+```
+
