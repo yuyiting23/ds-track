@@ -1,0 +1,45 @@
+Principles of Analytics Graphics
+
+1. Show cmaparision
+    * Control vs Experiment gorup to compare evidence between 2 hypotheses
+    (Control vs Air Cleaner, y = change in symptom-free days)
+
+2. Show causality, mechanism, explanation
+    * Make an explanation to show what's going on
+    * How you believe the world/ system works
+    * What's the casual framework for thinking about the question
+    (Control vs Air Cleaner, y = change in PMs) - Relationship: Negative
+
+    change in symptom-free days ~ change in PMs?? 
+
+3. Show multivariate data
+    * Show as much as data on a single plot as you can
+    * The world is inherently multivariant
+    * Try to tell a much richer story
+     (Spring, x = PM concentration, y = Daily Mortality) - Relationship: Postive
+     (Summer, x = PM concentration, y = Daily Mortality) - Relationship: Postive
+     (Fall, x = PM concentration, y = Daily Mortality)   - Relationship: Postive
+     (Winter, x = PM concentration, y = Daily Mortality) - Relationship: Postive
+     Overall,Relationship: Negative --> Symptoms Paradox 
+     Explanation: Confounding, 
+        Season in confounding with the relationship between PMs and mortality
+
+    * It's imoprtant to show as many as variabls as reasonable at a time, so that you will have a clear picture of the evidence.
+
+
+4. Integrate multiple models of evidence
+    * Completely integrate words, numbers, images, diagrams
+    * Combine different modes of evidence to build single presentation, as information rich as possible 
+
+5. Describe and document the evidence
+    * labels, scales, sources...
+    * credibility
+
+6. Content is king
+    * What's the story you want to tell
+    * What's the data you have
+    * How are you going to present it
+    * How is it gonna look like 
+
+
+

@@ -1,0 +1,93 @@
+---
+title: "Simple_Summaries"
+author: "I-Ting Yu"
+date: "August 27, 2016"
+output: html_document
+---
+
+```{r}
+library(datasets)
+str(mtcars)
+head(mtcars)
+```
+## 1-D Summaries
+### summary()
+```{r}
+summary(mtcars$hp)
+```
+
+### boxplot()
+```{r}
+boxplot(mtcars$hp, col = "blue")
+```
+
+### hist()
+```{r}
+hist(mtcars$hp, col = "green")
+
+# Hard to control, because it depends on R's alogorithm
+hist(mtcars$hp, col = "red", breaks = 20)
+
+# Alternatively
+my.break <- seq(from = 0, to = 350, by = 25)
+hist(mtcars$hp, col = "red", breaks = my.break)
+```
+
+Overlaying features
+```{r}
+boxplot(mtcars$hp, col = "wheat")
+abline(h = 200)
+
+hist(mtcars$hp, col = "green", breaks = 20)
+rug(mtcars$hp)
+
+# v, vertical x 
+abline(v = mean(mtcars$hp, na.rm = TRUE), lwd = 4)
+abline(v = median(mtcars$hp, na.rm = TRUE), col = "red", lwd = 4)
+```
+
+### barplot
+```{r}
+table(mtcars$cyl)
+barplot(table(mtcars$cyl), col = "wheat", main = "Number")
+```
+
+## 2-D Summaries
+
+### Multiple boxplot()
+```{r}
+boxplot(hp ~ cyl, data = mtcars, col = "red")
+```
+
+### Multiple Histograms
+```{r}
+par(mfrow = c(3, 1), mar = c(2, 2, 1, 1))
+hist(subset(mtcars, cyl == 4)$hp, col = "green")
+hist(subset(mtcars, cyl == 6)$hp, col = "green")
+hist(subset(mtcars, cyl == 8)$hp, col = "green")
+par(mfrow = c(1, 1))
+
+```
+
+### Scatterplot
+```{r}
+with(mtcars, plot(mpg, hp))
+abline(v = median(mtcars$mpg), h = median(mtcars$hp), col = c("red", "green"), lwd = 2, lty = 2)
+```
+
+### Scatterplot - Using color
+```{r}
+with(mtcars, plot(mpg, hp, col = cyl))
+```
+
+### Multiple Scatterplots
+```{r}
+par(mfrow = c(3, 1), mar = c(2, 2, 1, 1))
+with(subset(mtcars, cyl == 4), plot(mpg, hp, main =" 4 Cyl"), col = "green")
+with(subset(mtcars, cyl == 6), plot(mpg, hp, main =" 6 Cyl"), col = "green")
+with(subset(mtcars, cyl == 8), plot(mpg, hp, main =" 8 Cyl"), col = "green")
+par(mfrow = c(1, 1))
+```
+
+
+

@@ -1,0 +1,31 @@
+---
+title: "Plotting_Systems"
+author: "I-Ting Yu"
+date: "August 28, 2016"
+output: html_document
+---
+
+### The Base Plotting System
+```{r}
+library(datasets)
+data(cars)
+with(cars, plot(speed, dist))
+
+```
+
+### The Lattice System
+```{r}
+library(lattice)
+state <- data.frame(state.x77, region = state.region)
+
+xyplot(Life.Exp ~ Income | region, data = state, layout = c(4, 1))
+
+```
+
+### The ggplot2 System
+```{r}
+library(ggplot2)
+head(mpg)
+qplot(displ, hwy, data = mpg)
+```
+

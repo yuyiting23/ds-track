@@ -1,0 +1,20 @@
+Simple Summaries of Data 
+
+1-D
+	* Five-number summary
+	* Boxplots
+	* Histograms
+	* Density plot
+	* Barplot
+
+2-D
+	* Multiple box plots
+	* Multiple histograms
+	* Scatter plot
+	* Scatter plot - using color (or Multiple scatter plots)
+
+Summary
+	* Exploratory plots are "quick and dirty"
+	* Summarise the data (usually graphically) and highlight any broad features
+	* Explore basic quesitons and hypotheses(and perhaps rule them out)
+	* Suggest modeling strategies for the "next step"
